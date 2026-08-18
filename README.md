@@ -1,130 +1,83 @@
-# 🏥 Sistema de Consultas Mobile
+# Sistema de consultas mobile
 
-## 📋 Sobre o Projeto
+Aplicativo React Native com Expo para acompanhar médicos, pacientes e consultas de uma API REST. Permite carregar os cadastros, agendar consultas e alterar o status para confirmado ou cancelado.
 
-O **Sistema de Consultas Mobile** é uma aplicação mobile desenvolvida com **React Native** e **Expo** para o gerenciamento de consultas médicas. O aplicativo permite visualizar informações detalhadas de consultas, incluindo dados do médico, paciente, especialidade, valor e status, além de possibilitar a confirmação ou cancelamento de consultas de forma interativa.
+O backend compatível está em [lukiin-z/backend-hete](https://github.com/lukiin-z/backend-hete).
 
-O projeto utiliza **TypeScript** com tipagem estrita para garantir maior segurança e manutenibilidade do código, aplicando conceitos de `types` e `interfaces` para modelar as entidades do domínio.
+## Tecnologias
 
----
+- Expo 54;
+- React Native 0.81;
+- React 19;
+- TypeScript em modo estrito;
+- Axios.
 
-## 🚀 Tecnologias Utilizadas
+## Requisitos
 
-| Tecnologia | Versão | Descrição |
-|:---:|:---:|---|
-| ⚛️ **React Native** | `0.81.5` | Framework para desenvolvimento de aplicações mobile nativas |
-| 📱 **Expo** | `~54.0.33` | Plataforma e conjunto de ferramentas para desenvolvimento React Native |
-| 🔷 **TypeScript** | `~5.9.2` | Superset tipado de JavaScript para maior segurança no código |
-| ⚛️ **React** | `19.1.0` | Biblioteca para construção de interfaces de usuário |
-| 🌐 **React Native Web** | `^0.21.0` | Suporte para execução da aplicação em navegadores web |
-| 📊 **Expo Status Bar** | `~3.0.9` | Componente para controle da barra de status do dispositivo |
+- Node.js 20 ou superior;
+- npm;
+- backend executando e acessível pelo dispositivo ou emulador.
 
----
+## Executando
 
-## 📁 Estrutura do Projeto
-
-```
-📦 sistema-consultas-mobile/
-├── 🖼️ assets/                          # Recursos visuais (ícones, splash screen)
-│   ├── adaptive-icon.png
-│   ├── favicon.png
-│   ├── icon.png
-│   └── splash-icon.png
-├── 📂 src/
-│   ├── 🧩 components/                  # Componentes reutilizáveis
-│   │   ├── ConsultaCard.tsx            # Card de exibição de consulta
-│   │   └── index.ts                    # Barrel export dos componentes
-│   ├── 📄 interface/                    # Interfaces TypeScript
-│   │   ├── consulta.ts                 # Interface Consulta
-│   │   └── medico.ts                   # Interface Medico
-│   └── 🏷️ types/                       # Types TypeScript
-│       ├── especialidade.ts            # Type Especialidade
-│       ├── paciente.ts                 # Type Paciente
-│       └── statusConsulta.ts           # Type StatusConsulta
-├── 🏠 App.tsx                           # Componente raiz da aplicação
-├── 🚪 index.ts                          # Ponto de entrada (registerRootComponent)
-├── ⚙️ app.json                          # Configurações do Expo
-├── 🔧 tsconfig.json                     # Configurações do TypeScript
-├── 📦 package.json                      # Dependências e scripts do projeto
-└── 🔒 package-lock.json                 # Lock file das dependências
+```bash
+git clone https://github.com/lukiin-z/sistemadeconsulta.git
+cd sistemadeconsulta
+npm ci
 ```
 
----
+Copie o arquivo de ambiente e ajuste o endereço da API quando necessário:
 
-## ✨ Funcionalidades Implementadas
+```bash
+cp .env.example .env.local
+npm start
+```
 
-- 🩺 **Visualização de Consulta** — Exibição completa dos dados da consulta em um card estilizado, incluindo informações do médico (nome, CRM, especialidade), do paciente (nome, CPF, e-mail, telefone) e detalhes da consulta (data, valor, observações)
-- 🔄 **Gerenciamento de Status** — Sistema de status com quatro estados possíveis: `agendada`, `confirmada`, `cancelada` e `realizada`, com indicação visual por cores (🟠 laranja, 🟢 verde, 🔴 vermelho)
-- ✅ **Confirmar Consulta** — Botão para confirmar uma consulta agendada, alterando o status para `confirmada` com feedback visual em verde
-- ❌ **Cancelar Consulta** — Botão para cancelar uma consulta agendada, alterando o status para `cancelada` com feedback visual em vermelho
-- 💰 **Formatação de Dados** — Formatação automática de valores monetários em Real (BRL) e datas no padrão brasileiro (dd/mm/aaaa)
-- 📱 **Interface Responsiva** — Layout adaptável com ScrollView e componentes estilizados utilizando StyleSheet do React Native
-- 🔷 **Tipagem Estrita** — Modelagem completa do domínio com `types` e `interfaces` TypeScript, garantindo segurança em tempo de desenvolvimento
+No PowerShell, use `Copy-Item .env.example .env.local`.
 
----
+### Endereço da API
 
-## 🔗 Endpoints Principais
+A variável `EXPO_PUBLIC_API_URL` tem valor padrão `http://localhost:8080`.
 
-> 💡 O projeto atualmente opera com dados locais (mock data) definidos diretamente no componente `App.tsx`. As entidades do domínio estão modeladas e preparadas para integração com uma API REST futura.
+- navegador local: `http://localhost:8080`;
+- emulador Android: normalmente `http://10.0.2.2:8080`;
+- celular físico: use o IP local do computador, por exemplo `http://192.168.0.10:8080`.
 
-### 🗂️ Entidades do Domínio
+Se usar outro endereço, inclua a origem do Expo na configuração `CORS_ALLOWED_ORIGINS` do backend.
 
-| Entidade | Tipo | Campos Principais |
-|:---:|:---:|---|
-| 🏷️ `Especialidade` | `type` | `id`, `nome`, `descricao?` |
-| 👤 `Paciente` | `type` | `id`, `nome`, `cpf`, `email`, `telefone?` |
-| 👨‍⚕️ `Medico` | `interface` | `id`, `nome`, `crm`, `especialidade`, `ativo` |
-| 📋 `Consulta` | `interface` | `id`, `medico`, `paciente`, `data`, `valor`, `status`, `observacoes?` |
-| 🔖 `StatusConsulta` | `type` | `"agendada"` \| `"confirmada"` \| `"cancelada"` \| `"realizada"` |
+## Comandos
 
-### 🌐 Sugestão de Endpoints para Integração Futura
+| Comando | Descrição |
+| --- | --- |
+| `npm start` | Abre o servidor de desenvolvimento do Expo |
+| `npm run android` | Inicia no Android |
+| `npm run ios` | Inicia no iOS |
+| `npm run web` | Inicia no navegador |
+| `npm run typecheck` | Valida os tipos sem gerar arquivos |
 
-| Método | Rota | Descrição |
-|:---:|---|---|
-| 🟢 `GET` | `/consultas` | Listar todas as consultas |
-| 🟢 `GET` | `/consultas/:id` | Buscar consulta por ID |
-| 🟡 `POST` | `/consultas` | Criar nova consulta |
-| 🔵 `PUT` | `/consultas/:id` | Atualizar dados da consulta |
-| 🟣 `PATCH` | `/consultas/:id/status` | Alterar status da consulta |
-| 🟢 `GET` | `/medicos` | Listar todos os médicos |
-| 🟢 `GET` | `/pacientes` | Listar todos os pacientes |
-| 🟢 `GET` | `/especialidades` | Listar todas as especialidades |
+## Funcionalidades
 
----
+- listagem de médicos e pacientes;
+- listagem detalhada de consultas;
+- agendamento de consulta;
+- confirmação e cancelamento;
+- formatação de data e moeda para `pt-BR`;
+- feedback de carregamento, erro e nova tentativa.
 
-## 🛠️ Como Executar
+## Estrutura
 
-### 📋 Pré-requisitos
+```text
+assets/                 ícones e imagens do Expo
+src/
+├── components/         componentes reutilizáveis
+├── interfaces/         modelos principais do domínio
+├── services/           cliente HTTP e integração REST
+└── types/              tipos auxiliares do domínio
+App.tsx                 tela principal
+app.json                configuração do Expo
+index.ts                ponto de entrada
+```
 
-- 📦 [Node.js](https://nodejs.org/) (versão 18 ou superior)
-- 📦 [npm](https://www.npmjs.com/) ou [yarn](https://yarnpkg.com/)
-- 🛠️ [Expo CLI](https://docs.expo.dev/get-started/installation/)
-- 📱 [Expo Go](https://expo.dev/client) instalado no dispositivo móvel (para testes no celular)
+## Integração
 
-### 🚀 Passo a Passo
-
-1. **Clone o repositório**
-   ```bash
-   git clone https://github.com/An4lu/sistema-consultas-mobile.git
-   cd sistema-consultas-mobile
-   ```
-
-2. **Instale as dependências**
-   ```bash
-   npm install
-   ```
-
-3. **Inicie o servidor de desenvolvimento**
-   ```bash
-   npm start
-   ```
-
-4. **Execute no dispositivo desejado**
-   - 🤖 **Android:** Pressione `a` no terminal ou execute `npm run android`
-   - 🍎 **iOS:** Pressione `i` no terminal ou execute `npm run ios`
-   - 🌐 **Web:** Pressione `w` no terminal ou execute `npm run web`
-   - 📱 **Expo Go:** Escaneie o QR Code exibido no terminal com o aplicativo Expo Go
-
----
-
-> 💜 Desenvolvido com React Native + Expo + TypeScript
+O app usa os endpoints `/medicos`, `/pacientes` e `/consultas`. Para agendar uma consulta, médico e paciente precisam estar cadastrados previamente no backend.
