@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Button } from "react-native";
-import { Consulta } from "../interface/consulta";
+import { Consulta } from "../interfaces/consulta";
 
 type ConsultaCardProps = {
   consulta: Consulta;
@@ -39,6 +39,7 @@ export default function ConsultaCard({
           styles.statusBadge,
           consulta.status === "confirmada" && styles.statusConfirmada,
           consulta.status === "cancelada" && styles.statusCancelada,
+          consulta.status === "realizada" && styles.statusRealizada,
         ]}
       >
         <Text style={styles.statusTexto}>{consulta.status.toUpperCase()}</Text>
@@ -122,6 +123,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
+    marginBottom: 12,
   },
 
   statusBadge: {
@@ -137,6 +139,9 @@ const styles = StyleSheet.create({
   },
   statusCancelada: {
     backgroundColor: "#F44336",
+  },
+  statusRealizada: {
+    backgroundColor: "#1565C0",
   },
   statusTexto: {
     color: "#fff",

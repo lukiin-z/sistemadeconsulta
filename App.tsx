@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  Alert,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -22,23 +22,21 @@ import {
   cancelarConsulta,
   NovaConsulta,
 } from "./src/services/consultaService";
-import { Medico } from "./src/interface/medico";
+import { Medico } from "./src/interfaces/medico";
 import { Paciente } from "./src/types/paciente";
-import { Consulta } from "./src/interface/consulta";
+import { Consulta } from "./src/interfaces/consulta";
+import ConsultaCard from "./src/components/ConsultaCard";
+import { API_BASE_URL } from "./src/services/api";
 
-const STATUS_CORES: Record<string, string> = {
-  agendada: "#e3f2fd",
-  confirmada: "#d4edda",
-  realizada: "#e8f5e9",
-  cancelada: "#f8d7da",
-};
-
-const STATUS_TEXTO_CORES: Record<string, string> = {
-  agendada: "#1565c0",
-  confirmada: "#155724",
-  realizada: "#1b5e20",
-  cancelada: "#721c24",
-};
+function dataHoraInicial(): string {
+  const data = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  data.setMinutes(0, 0, 0);
+  const doisDigitos = (valor: number) => String(valor).padStart(2, "0");
+  return [
+    `${data.getFullYear()}-${doisDigitos(data.getMonth() + 1)}-${doisDigitos(data.getDate())}`,
+    `${doisDigitos(data.getHours())}:00:00`,
+  ].join("T");
+}
 
 export default function App() {
   const [medicos, setMedicos] = useState<Medico[]>([]);
@@ -51,7 +49,7 @@ export default function App() {
   const [salvando, setSalvando] = useState(false);
   const [formMedicoId, setFormMedicoId] = useState("");
   const [formPacienteId, setFormPacienteId] = useState("");
-  const [formDataHora, setFormDataHora] = useState("2026-05-20T10:00:00");
+  const [formDataHora, setFormDataHora] = useState(dataHoraInicial);
   const [formValor, setFormValor] = useState("");
   const [formObservacoes, setFormObservacoes] = useState("");
 
@@ -73,28 +71,24 @@ export default function App() {
       setMedicos(listaMedicos);
       setPacientes(listaPacientes);
       setConsultas(listaConsultas);
-    } catch (error) {
+    } catch {
       setErro(
-        "Não foi possível carregar os dados.\nVerifique se o backend está rodando em http://localhost:8080"
+        `Não foi possível carregar os dados.\nVerifique a API em ${API_BASE_URL}`
       );
     } finally {
       setCarregando(false);
     }
   }
 
-  function formatarDataHora(dataHora: string): string {
-    const data = new Date(dataHora);
-    const dia = data.toLocaleDateString("pt-BR");
-    const hora = data.toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    return `${dia} às ${hora}`;
-  }
-
   async function handleAgendarConsulta() {
     if (!formMedicoId || !formPacienteId || !formDataHora || !formValor) {
-      alert("Preencha todos os campos obrigatórios (*).");
+      Alert.alert("Campos obrigatórios", "Preencha todos os campos marcados com *.");
+      return;
+    }
+
+    const valor = Number(formValor.replace(",", "."));
+    if (!Number.isFinite(valor) || valor < 0 || Number.isNaN(Date.parse(formDataHora))) {
+      Alert.alert("Dados inválidos", "Informe uma data válida e um valor maior ou igual a zero.");
       return;
     }
 
@@ -106,7 +100,7 @@ export default function App() {
         pacienteId: Number(formPacienteId),
         dataHora: formDataHora,
         status: "agendada",
-        valor: Number(formValor),
+        valor,
         observacoes: formObservacoes || undefined,
       };
 
@@ -115,12 +109,13 @@ export default function App() {
 
       setFormMedicoId("");
       setFormPacienteId("");
-      setFormDataHora("2026-05-20T10:00:00");
+      setFormDataHora(dataHoraInicial());
       setFormValor("");
       setFormObservacoes("");
       setMostrarForm(false);
-    } catch (error) {
-      alert(
+    } catch {
+      Alert.alert(
+        "Não foi possível agendar",
         "Erro ao agendar consulta.\nVerifique os IDs de médico e paciente."
       );
     } finally {
@@ -135,7 +130,7 @@ export default function App() {
         prev.map((c) => (c.id === atualizada.id ? atualizada : c))
       );
     } catch {
-      alert("Erro ao confirmar consulta.");
+      Alert.alert("Erro", "Não foi possível confirmar a consulta.");
     }
   }
 
@@ -146,7 +141,7 @@ export default function App() {
         prev.map((c) => (c.id === atualizada.id ? atualizada : c))
       );
     } catch {
-      alert("Erro ao cancelar consulta.");
+      Alert.alert("Erro", "Não foi possível cancelar a consulta.");
     }
   }
 
@@ -154,153 +149,65 @@ export default function App() {
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <FlatList
-        contentContainerStyle={styles.scrollContent}
-        data={[]}
-        renderItem={null}
-        ListHeaderComponent={
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.titulo}>Sistema de Consultas</Text>
+          <Text style={styles.subtitulo}>Dados do Backend</Text>
+        </View>
+
+        {carregando && <ActivityIndicator size="large" color="#fff" />}
+
+        {erro && (
+          <View style={styles.erroContainer}>
+            <Text style={styles.erroTexto}>{erro}</Text>
+            <TouchableOpacity style={styles.botaoTentarNovamente} onPress={carregarDados}>
+              <Text style={styles.botaoTentarNovamenteTexto}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!carregando && !erro && (
           <>
-            <View style={styles.header}>
-              <Text style={styles.titulo}>Sistema de Consultas</Text>
-              <Text style={styles.subtitulo}>Dados do Backend</Text>
+            <Text style={styles.secaoTitulo}>👨‍⚕️ Médicos ({medicos.length})</Text>
+            {medicos.map((medico) => (
+              <View key={medico.id} style={styles.card}>
+                <Text style={styles.cardNome}>{medico.nome}</Text>
+                <Text style={styles.cardInfo}>CRM: {medico.crm}</Text>
+                <Text style={styles.cardInfo}>{medico.especialidade?.nome ?? "Sem especialidade"}</Text>
+                <View style={[styles.badge, medico.ativo ? styles.badgeAtivo : styles.badgeInativo]}>
+                  <Text style={styles.badgeTexto}>{medico.ativo ? "Ativo" : "Inativo"}</Text>
+                </View>
+              </View>
+            ))}
+
+            <Text style={[styles.secaoTitulo, styles.secaoEspacada]}>👤 Pacientes ({pacientes.length})</Text>
+            {pacientes.map((paciente) => (
+              <View key={paciente.id} style={styles.card}>
+                <Text style={styles.cardNome}>{paciente.nome}</Text>
+                <Text style={styles.cardInfo}>CPF: {paciente.cpf}</Text>
+                <Text style={styles.cardInfo}>{paciente.email}</Text>
+                {paciente.telefone && <Text style={styles.cardInfo}>Tel: {paciente.telefone}</Text>}
+              </View>
+            ))}
+
+            <View style={styles.secaoHeader}>
+              <Text style={styles.secaoTituloConsultas}>📅 Consultas ({consultas.length})</Text>
+              <TouchableOpacity style={styles.botaoAgendar} onPress={() => setMostrarForm(true)}>
+                <Text style={styles.botaoAgendarTexto}>+ Agendar</Text>
+              </TouchableOpacity>
             </View>
 
-            {carregando && (
-              <ActivityIndicator
-                size="large"
-                color="#fff"
-                style={{ marginTop: 40 }}
+            {consultas.map((consulta) => (
+              <ConsultaCard
+                key={consulta.id}
+                consulta={consulta}
+                onConfirmar={() => handleConfirmarConsulta(consulta)}
+                onCancelar={() => handleCancelarConsulta(consulta)}
               />
-            )}
-
-            {erro && (
-              <View style={styles.erroContainer}>
-                <Text style={styles.erroTexto}>{erro}</Text>
-              </View>
-            )}
-
-            {!carregando && !erro && (
-              <>
-                <Text style={styles.secaoTitulo}>
-                  👨‍⚕️ Médicos ({medicos.length})
-                </Text>
-                {medicos.map((medico) => (
-                  <View key={medico.id} style={styles.card}>
-                    <Text style={styles.cardNome}>{medico.nome}</Text>
-                    <Text style={styles.cardInfo}>CRM: {medico.crm}</Text>
-                    <Text style={styles.cardInfo}>
-                      {medico.especialidade?.nome ?? " - "}
-                    </Text>
-                    <View
-                      style={[
-                        styles.badge,
-                        medico.ativo ? styles.badgeAtivo : styles.badgeInativo,
-                      ]}
-                    >
-                      <Text style={styles.badgeTexto}>
-                        {medico.ativo ? "Ativo" : "Inativo"}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-
-                <Text style={[styles.secaoTitulo, { marginTop: 24 }]}>
-                  👤 Pacientes ({pacientes.length})
-                </Text>
-                {pacientes.map((paciente) => (
-                  <View key={paciente.id} style={styles.card}>
-                    <Text style={styles.cardNome}>{paciente.nome}</Text>
-                    <Text style={styles.cardInfo}>CPF: {paciente.cpf}</Text>
-                    <Text style={styles.cardInfo}>{paciente.email}</Text>
-                    {paciente.telefone && (
-                      <Text style={styles.cardInfo}>
-                        Tel: {paciente.telefone}
-                      </Text>
-                    )}
-                  </View>
-                ))}
-
-                <View style={styles.secaoHeader}>
-                  <Text style={styles.secaoTituloConsultas}>
-                    📅 Consultas ({consultas.length})
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.botaoAgendar}
-                    onPress={() => setMostrarForm(true)}
-                  >
-                    <Text style={styles.botaoAgendarTexto}>+ Agendar</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {consultas.map((consulta) => (
-                  <View key={consulta.id} style={styles.card}>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        {
-                          backgroundColor:
-                            STATUS_CORES[consulta.status] ?? "#f0f0f0",
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statusTexto,
-                          {
-                            color:
-                              STATUS_TEXTO_CORES[consulta.status] ?? "#333",
-                          },
-                        ]}
-                      >
-                        {consulta.status.toUpperCase()}
-                      </Text>
-                    </View>
-
-                    <Text style={styles.cardNome}>
-                      Dr(a). {consulta.medico?.nome}
-                    </Text>
-                    <Text style={styles.cardInfo}>
-                      👤 {consulta.paciente?.nome}
-                    </Text>
-                    <Text style={styles.cardInfo}>
-                      📅 {formatarDataHora(consulta.dataHora)}
-                    </Text>
-                    <Text style={styles.cardInfo}>
-                      💰{" "}
-                      {Number(consulta.valor).toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      })}
-                    </Text>
-                    {consulta.observacoes && (
-                      <Text style={styles.cardObservacoes}>
-                        📝 {consulta.observacoes}
-                      </Text>
-                    )}
-
-                    {consulta.status === "agendada" && (
-                      <View style={styles.acoesContainer}>
-                        <TouchableOpacity
-                          style={[styles.botaoAcao, styles.botaoConfirmar]}
-                          onPress={() => handleConfirmarConsulta(consulta)}
-                        >
-                          <Text style={styles.botaoAcaoTexto}>✓ Confirmar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.botaoAcao, styles.botaoCancelarAcao]}
-                          onPress={() => handleCancelarConsulta(consulta)}
-                        >
-                          <Text style={styles.botaoAcaoTexto}>✗ Cancelar</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                ))}
-              </>
-            )}
+            ))}
           </>
-        }
-      />
+        )}
+      </ScrollView>
 
       <Modal
         visible={mostrarForm}
@@ -403,6 +310,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginBottom: 12,
   },
+  secaoEspacada: { marginTop: 24 },
   secaoHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -424,12 +332,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardInfo: { fontSize: 14, color: "#666", marginBottom: 2 },
-  cardObservacoes: {
-    fontSize: 13,
-    color: "#888",
-    fontStyle: "italic",
-    marginTop: 4,
-  },
   badge: {
     alignSelf: "flex-start",
     borderRadius: 6,
@@ -440,19 +342,6 @@ const styles = StyleSheet.create({
   badgeAtivo: { backgroundColor: "#d4edda" },
   badgeInativo: { backgroundColor: "#f8d7da" },
   badgeTexto: { fontSize: 12, fontWeight: "bold", color: "#333" },
-  statusBadge: {
-    alignSelf: "flex-start",
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginBottom: 8,
-  },
-  statusTexto: { fontSize: 11, fontWeight: "bold" },
-  acoesContainer: { flexDirection: "row", gap: 8, marginTop: 10 },
-  botaoAcao: { flex: 1, borderRadius: 8, padding: 10, alignItems: "center" },
-  botaoConfirmar: { backgroundColor: "#28a745" },
-  botaoCancelarAcao: { backgroundColor: "#dc3545" },
-  botaoAcaoTexto: { color: "#fff", fontWeight: "bold", fontSize: 13 },
   botaoAgendar: {
     backgroundColor: "#fff",
     borderRadius: 8,
@@ -474,6 +363,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
+  botaoTentarNovamente: {
+    alignSelf: "center",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  botaoTentarNovamenteTexto: { color: "#79059C", fontWeight: "bold" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

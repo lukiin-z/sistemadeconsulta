@@ -1,6 +1,6 @@
 import api from "./api";
 import { StatusConsulta } from "../types/statusConsulta";
-import { Consulta } from "../interface/consulta";
+import { Consulta } from "../interfaces/consulta";
 
 export type NovaConsulta = {
   medicoId: number;
@@ -37,27 +37,22 @@ export async function agendarConsulta(
 }
 
 export async function confirmarConsulta(consulta: Consulta): Promise<Consulta> {
-  const payload = {
-    medico: { id: consulta.medico.id },
-    paciente: { id: consulta.paciente.id },
-    dataHora: consulta.dataHora,
-    status: "confirmada" as StatusConsulta,
-    valor: consulta.valor,
-    observacoes: consulta.observacoes,
-  };
-  const response = await api.put<Consulta>(
-    `/consultas/${consulta.id}`,
-    payload
-  );
-  return response.data;
+  return atualizarStatusConsulta(consulta, "confirmada");
 }
 
 export async function cancelarConsulta(consulta: Consulta): Promise<Consulta> {
+  return atualizarStatusConsulta(consulta, "cancelada");
+}
+
+async function atualizarStatusConsulta(
+  consulta: Consulta,
+  status: StatusConsulta
+): Promise<Consulta> {
   const payload = {
     medico: { id: consulta.medico.id },
     paciente: { id: consulta.paciente.id },
     dataHora: consulta.dataHora,
-    status: "cancelada" as StatusConsulta,
+    status,
     valor: consulta.valor,
     observacoes: consulta.observacoes,
   };
