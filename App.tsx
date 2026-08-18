@@ -1,428 +1,192 @@
-import React, { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  Alert,
   ActivityIndicator,
-  Modal,
-  TextInput,
-  TouchableOpacity,
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { listarMedicos } from "./src/services/medicoService";
-import { listarPacientes } from "./src/services/pacienteService";
-import {
-  listarConsultas,
-  agendarConsulta,
-  confirmarConsulta,
-  cancelarConsulta,
-  NovaConsulta,
-} from "./src/services/consultaService";
-import { Medico } from "./src/interfaces/medico";
-import { Paciente } from "./src/types/paciente";
-import { Consulta } from "./src/interfaces/consulta";
+
+import AgendamentoModal from "./src/components/AgendamentoModal";
 import ConsultaCard from "./src/components/ConsultaCard";
+import FiltrosStatus, { FiltroStatus } from "./src/components/FiltrosStatus";
+import { useAgenda } from "./src/hooks/useAgenda";
 import { API_BASE_URL } from "./src/services/api";
 
-function dataHoraInicial(): string {
-  const data = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  data.setMinutes(0, 0, 0);
-  const doisDigitos = (valor: number) => String(valor).padStart(2, "0");
-  return [
-    `${data.getFullYear()}-${doisDigitos(data.getMonth() + 1)}-${doisDigitos(data.getDate())}`,
-    `${doisDigitos(data.getHours())}:00:00`,
-  ].join("T");
-}
-
 export default function App() {
-  const [medicos, setMedicos] = useState<Medico[]>([]);
-  const [pacientes, setPacientes] = useState<Paciente[]>([]);
-  const [consultas, setConsultas] = useState<Consulta[]>([]);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
+  const agenda = useAgenda();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [filtro, setFiltro] = useState<FiltroStatus>("todas");
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [salvando, setSalvando] = useState(false);
-  const [formMedicoId, setFormMedicoId] = useState("");
-  const [formPacienteId, setFormPacienteId] = useState("");
-  const [formDataHora, setFormDataHora] = useState(dataHoraInicial);
-  const [formValor, setFormValor] = useState("");
-  const [formObservacoes, setFormObservacoes] = useState("");
+  const consultasFiltradas = useMemo(
+    () => agenda.consultas.filter((item) => filtro === "todas" || item.status === filtro),
+    [agenda.consultas, filtro]
+  );
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
+  const podeAgendar = agenda.medicos.some((item) => item.ativo)
+    && agenda.pacientes.some((item) => item.ativo);
 
-  async function carregarDados() {
-    try {
-      setCarregando(true);
-      setErro(null);
-
-      const [listaMedicos, listaPacientes, listaConsultas] = await Promise.all([
-        listarMedicos(),
-        listarPacientes(),
-        listarConsultas(),
-      ]);
-
-      setMedicos(listaMedicos);
-      setPacientes(listaPacientes);
-      setConsultas(listaConsultas);
-    } catch {
-      setErro(
-        `Não foi possível carregar os dados.\nVerifique a API em ${API_BASE_URL}`
-      );
-    } finally {
-      setCarregando(false);
-    }
-  }
-
-  async function handleAgendarConsulta() {
-    if (!formMedicoId || !formPacienteId || !formDataHora || !formValor) {
-      Alert.alert("Campos obrigatórios", "Preencha todos os campos marcados com *.");
-      return;
-    }
-
-    const valor = Number(formValor.replace(",", "."));
-    if (!Number.isFinite(valor) || valor < 0 || Number.isNaN(Date.parse(formDataHora))) {
-      Alert.alert("Dados inválidos", "Informe uma data válida e um valor maior ou igual a zero.");
-      return;
-    }
-
-    try {
-      setSalvando(true);
-
-      const novaConsulta: NovaConsulta = {
-        medicoId: Number(formMedicoId),
-        pacienteId: Number(formPacienteId),
-        dataHora: formDataHora,
-        status: "agendada",
-        valor,
-        observacoes: formObservacoes || undefined,
-      };
-
-      const consultaCriada = await agendarConsulta(novaConsulta);
-      setConsultas((prev) => [...prev, consultaCriada]);
-
-      setFormMedicoId("");
-      setFormPacienteId("");
-      setFormDataHora(dataHoraInicial());
-      setFormValor("");
-      setFormObservacoes("");
-      setMostrarForm(false);
-    } catch {
-      Alert.alert(
-        "Não foi possível agendar",
-        "Erro ao agendar consulta.\nVerifique os IDs de médico e paciente."
-      );
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  async function handleConfirmarConsulta(consulta: Consulta) {
-    try {
-      const atualizada = await confirmarConsulta(consulta);
-      setConsultas((prev) =>
-        prev.map((c) => (c.id === atualizada.id ? atualizada : c))
-      );
-    } catch {
-      Alert.alert("Erro", "Não foi possível confirmar a consulta.");
-    }
-  }
-
-  async function handleCancelarConsulta(consulta: Consulta) {
-    try {
-      const atualizada = await cancelarConsulta(consulta);
-      setConsultas((prev) =>
-        prev.map((c) => (c.id === atualizada.id ? atualizada : c))
-      );
-    } catch {
-      Alert.alert("Erro", "Não foi possível cancelar a consulta.");
-    }
+  async function refresh() {
+    setRefreshing(true);
+    await agenda.carregar();
+    setRefreshing(false);
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.titulo}>Sistema de Consultas</Text>
-          <Text style={styles.subtitulo}>Dados do Backend</Text>
+      <ScrollView
+        style={styles.page}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#6d28d9" />}
+      >
+        <View style={styles.hero}>
+          <Text style={styles.eyebrow}>CLÍNICA DIGITAL</Text>
+          <Text style={styles.title}>Sua agenda, sem complicação.</Text>
+          <Text style={styles.subtitle}>Consultas, pacientes e profissionais em um só lugar.</Text>
+          <Pressable
+            accessibilityRole="button"
+            disabled={!podeAgendar}
+            style={[styles.newButton, !podeAgendar && styles.disabled]}
+            onPress={() => setModalVisible(true)}
+          >
+            <Text style={styles.newButtonIcon}>＋</Text>
+            <Text style={styles.newButtonText}>Nova consulta</Text>
+          </Pressable>
         </View>
 
-        {carregando && <ActivityIndicator size="large" color="#fff" />}
-
-        {erro && (
-          <View style={styles.erroContainer}>
-            <Text style={styles.erroTexto}>{erro}</Text>
-            <TouchableOpacity style={styles.botaoTentarNovamente} onPress={carregarDados}>
-              <Text style={styles.botaoTentarNovamenteTexto}>Tentar novamente</Text>
-            </TouchableOpacity>
+        <View style={styles.body}>
+          <View style={styles.metrics}>
+            <Metric value={agenda.totais.agendadas} label="Agendadas" accent="#f59e0b" />
+            <Metric value={agenda.totais.confirmadas} label="Confirmadas" accent="#16a66a" />
+            <Metric value={agenda.totais.concluidas} label="Realizadas" accent="#4f72d8" />
           </View>
-        )}
 
-        {!carregando && !erro && (
-          <>
-            <Text style={styles.secaoTitulo}>👨‍⚕️ Médicos ({medicos.length})</Text>
-            {medicos.map((medico) => (
-              <View key={medico.id} style={styles.card}>
-                <Text style={styles.cardNome}>{medico.nome}</Text>
-                <Text style={styles.cardInfo}>CRM: {medico.crm}</Text>
-                <Text style={styles.cardInfo}>{medico.especialidade?.nome ?? "Sem especialidade"}</Text>
-                <View style={[styles.badge, medico.ativo ? styles.badgeAtivo : styles.badgeInativo]}>
-                  <Text style={styles.badgeTexto}>{medico.ativo ? "Ativo" : "Inativo"}</Text>
-                </View>
-              </View>
-            ))}
+          {agenda.feedback && (
+            <Pressable
+              style={[
+                styles.feedback,
+                agenda.feedback.tipo === "erro" ? styles.feedbackError : styles.feedbackSuccess,
+              ]}
+              onPress={agenda.limparFeedback}
+            >
+              <Text style={styles.feedbackText}>{agenda.feedback.mensagem}</Text>
+              <Text style={styles.feedbackClose}>×</Text>
+            </Pressable>
+          )}
 
-            <Text style={[styles.secaoTitulo, styles.secaoEspacada]}>👤 Pacientes ({pacientes.length})</Text>
-            {pacientes.map((paciente) => (
-              <View key={paciente.id} style={styles.card}>
-                <Text style={styles.cardNome}>{paciente.nome}</Text>
-                <Text style={styles.cardInfo}>CPF: {paciente.cpf}</Text>
-                <Text style={styles.cardInfo}>{paciente.email}</Text>
-                {paciente.telefone && <Text style={styles.cardInfo}>Tel: {paciente.telefone}</Text>}
-              </View>
-            ))}
-
-            <View style={styles.secaoHeader}>
-              <Text style={styles.secaoTituloConsultas}>📅 Consultas ({consultas.length})</Text>
-              <TouchableOpacity style={styles.botaoAgendar} onPress={() => setMostrarForm(true)}>
-                <Text style={styles.botaoAgendarTexto}>+ Agendar</Text>
-              </TouchableOpacity>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionEyebrow}>AGENDA</Text>
+              <Text style={styles.sectionTitle}>Consultas</Text>
             </View>
+            <Text style={styles.count}>{consultasFiltradas.length}</Text>
+          </View>
 
-            {consultas.map((consulta) => (
-              <ConsultaCard
-                key={consulta.id}
-                consulta={consulta}
-                onConfirmar={() => handleConfirmarConsulta(consulta)}
-                onCancelar={() => handleCancelarConsulta(consulta)}
-              />
-            ))}
-          </>
-        )}
+          <FiltrosStatus value={filtro} onChange={setFiltro} />
+
+          {agenda.carregando ? (
+            <View style={styles.centerState}>
+              <ActivityIndicator size="large" color="#6d28d9" />
+              <Text style={styles.stateText}>Carregando sua agenda...</Text>
+            </View>
+          ) : agenda.erro ? (
+            <View style={styles.errorState}>
+              <Text style={styles.errorTitle}>Não conseguimos acessar a agenda</Text>
+              <Text style={styles.errorText}>{agenda.erro}</Text>
+              <Text style={styles.apiText}>{API_BASE_URL}</Text>
+              <Pressable style={styles.retry} onPress={agenda.carregar}>
+                <Text style={styles.retryText}>Tentar novamente</Text>
+              </Pressable>
+            </View>
+          ) : consultasFiltradas.length === 0 ? (
+            <View style={styles.centerState}>
+              <Text style={styles.emptyIcon}>◷</Text>
+              <Text style={styles.emptyTitle}>Nenhuma consulta por aqui</Text>
+              <Text style={styles.stateText}>Altere o filtro ou crie um novo agendamento.</Text>
+            </View>
+          ) : (
+            <View style={styles.list}>
+              {consultasFiltradas.map((consulta) => (
+                <ConsultaCard
+                  key={consulta.id}
+                  consulta={consulta}
+                  busy={agenda.atualizandoId === consulta.id}
+                  onStatusChange={(status) => agenda.alterarStatus(consulta.id, status)}
+                />
+              ))}
+            </View>
+          )}
+
+          {!podeAgendar && !agenda.carregando && !agenda.erro && (
+            <Text style={styles.warning}>Cadastre ao menos um médico e um paciente ativos para agendar.</Text>
+          )}
+        </View>
       </ScrollView>
 
-      <Modal
-        visible={mostrarForm}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setMostrarForm(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitulo}>Nova Consulta</Text>
-            <ScrollView>
-              <Text style={styles.inputLabel}>ID do Médico *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex: 1"
-                keyboardType="numeric"
-                value={formMedicoId}
-                onChangeText={setFormMedicoId}
-              />
+      <AgendamentoModal
+        visible={modalVisible}
+        medicos={agenda.medicos}
+        pacientes={agenda.pacientes}
+        onClose={() => setModalVisible(false)}
+        onSubmit={agenda.agendar}
+      />
+    </SafeAreaView>
+  );
+}
 
-              <Text style={styles.inputLabel}>ID do Paciente *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex: 1"
-                keyboardType="numeric"
-                value={formPacienteId}
-                onChangeText={setFormPacienteId}
-              />
-
-              <Text style={styles.inputLabel}>
-                Data e Hora * (YYYY-MM-DDTHH:MM:SS)
-              </Text>
-              <TextInput
-                style={styles.input}
-                placeholder="2026-05-25T10:00:00"
-                value={formDataHora}
-                onChangeText={setFormDataHora}
-              />
-
-              <Text style={styles.inputLabel}>Valor (R$) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Ex: 250"
-                keyboardType="numeric"
-                value={formValor}
-                onChangeText={setFormValor}
-              />
-
-              <Text style={styles.inputLabel}>Observações (opcional)</Text>
-              <TextInput
-                style={[styles.input, styles.inputMultilinha]}
-                placeholder="Ex: Consulta de rotina"
-                value={formObservacoes}
-                onChangeText={setFormObservacoes}
-                multiline
-                numberOfLines={3}
-              />
-
-              <TouchableOpacity
-                style={[
-                  styles.botaoSalvar,
-                  salvando && styles.botaoDesabilitado,
-                ]}
-                onPress={handleAgendarConsulta}
-                disabled={salvando}
-              >
-                {salvando ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.botaoSalvarTexto}>Agendar Consulta</Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.botaoCancelarModal}
-                onPress={() => setMostrarForm(false)}
-              >
-                <Text style={styles.botaoCancelarModalTexto}>Cancelar</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+function Metric({ value, label, accent }: { value: number; label: string; accent: string }) {
+  return (
+    <View style={styles.metric}>
+      <View style={[styles.metricAccent, { backgroundColor: accent }]} />
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#79059C" },
-  scrollContent: { padding: 20, paddingTop: 60, paddingBottom: 40 },
-  header: { alignItems: "center", marginBottom: 24 },
-  titulo: { fontSize: 28, fontWeight: "bold", color: "#fff", marginBottom: 8 },
-  subtitulo: { fontSize: 18, color: "#fff", opacity: 0.9 },
-  secaoTitulo: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 12,
-  },
-  secaoEspacada: { marginTop: 24 },
-  secaoHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  secaoTituloConsultas: { fontSize: 18, fontWeight: "bold", color: "#fff" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  cardNome: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 4,
-  },
-  cardInfo: { fontSize: 14, color: "#666", marginBottom: 2 },
-  badge: {
-    alignSelf: "flex-start",
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginTop: 8,
-  },
-  badgeAtivo: { backgroundColor: "#d4edda" },
-  badgeInativo: { backgroundColor: "#f8d7da" },
-  badgeTexto: { fontSize: 12, fontWeight: "bold", color: "#333" },
-  botaoAgendar: {
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  botaoAgendarTexto: { color: "#79059C", fontWeight: "bold", fontSize: 14 },
-  erroContainer: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: "rgba(255,80,80,0.2)",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,80,80,0.5)",
-  },
-  erroTexto: {
-    fontSize: 14,
-    color: "#fff",
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  botaoTentarNovamente: {
-    alignSelf: "center",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  botaoTentarNovamenteTexto: { color: "#79059C", fontWeight: "bold" },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContainer: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 24,
-    maxHeight: "85%",
-  },
-  modalTitulo: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#555",
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
-    marginBottom: 16,
-    color: "#333",
-  },
-  inputMultilinha: { height: 80, textAlignVertical: "top" },
-  botaoSalvar: {
-    backgroundColor: "#79059C",
-    borderRadius: 10,
-    padding: 16,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  botaoDesabilitado: { opacity: 0.6 },
-  botaoSalvarTexto: { color: "#fff", fontWeight: "bold", fontSize: 16 },
-  botaoCancelarModal: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    padding: 14,
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  botaoCancelarModalTexto: { color: "#666", fontSize: 15 },
+  safeArea: { backgroundColor: "#3b1261", flex: 1 },
+  page: { backgroundColor: "#f7f4fa", flex: 1 },
+  content: { flexGrow: 1 },
+  hero: { backgroundColor: "#3b1261", paddingBottom: 42, paddingHorizontal: 22, paddingTop: 42 },
+  eyebrow: { color: "#c4a7e7", fontSize: 11, fontWeight: "800", letterSpacing: 2 },
+  title: { color: "#fff", fontSize: 34, fontWeight: "900", letterSpacing: -1, lineHeight: 39, marginTop: 10, maxWidth: 330 },
+  subtitle: { color: "#d9c8e7", fontSize: 14, lineHeight: 21, marginTop: 10, maxWidth: 330 },
+  newButton: { alignItems: "center", alignSelf: "flex-start", backgroundColor: "#fff", borderRadius: 14, flexDirection: "row", marginTop: 24, paddingHorizontal: 17, paddingVertical: 13 },
+  newButtonIcon: { color: "#6d28d9", fontSize: 20, fontWeight: "700", marginRight: 6 },
+  newButtonText: { color: "#4c1d7b", fontSize: 14, fontWeight: "800" },
+  disabled: { opacity: 0.45 },
+  body: { backgroundColor: "#f7f4fa", borderTopLeftRadius: 30, borderTopRightRadius: 30, marginTop: -24, minHeight: 500, paddingHorizontal: 18, paddingTop: 22 },
+  metrics: { flexDirection: "row", gap: 10, marginBottom: 26 },
+  metric: { backgroundColor: "#fff", borderRadius: 16, flex: 1, overflow: "hidden", padding: 13 },
+  metricAccent: { borderRadius: 2, height: 4, marginBottom: 10, width: 26 },
+  metricValue: { color: "#241b2f", fontSize: 23, fontWeight: "900" },
+  metricLabel: { color: "#82788d", fontSize: 10, fontWeight: "700", marginTop: 2 },
+  feedback: { alignItems: "center", borderRadius: 13, flexDirection: "row", justifyContent: "space-between", marginBottom: 18, padding: 13 },
+  feedbackSuccess: { backgroundColor: "#e4f7ed" },
+  feedbackError: { backgroundColor: "#ffebed" },
+  feedbackText: { color: "#3d3348", flex: 1, fontSize: 13, fontWeight: "700" },
+  feedbackClose: { color: "#62586f", fontSize: 20, marginLeft: 8 },
+  sectionHeader: { alignItems: "flex-end", flexDirection: "row", justifyContent: "space-between", marginBottom: 11 },
+  sectionEyebrow: { color: "#7c3aed", fontSize: 10, fontWeight: "900", letterSpacing: 1.5 },
+  sectionTitle: { color: "#241b2f", fontSize: 26, fontWeight: "900", marginTop: 2 },
+  count: { backgroundColor: "#e9e2ef", borderRadius: 999, color: "#62586f", fontSize: 12, fontWeight: "800", minWidth: 30, paddingHorizontal: 9, paddingVertical: 6, textAlign: "center" },
+  list: { marginTop: 14 },
+  centerState: { alignItems: "center", paddingHorizontal: 25, paddingVertical: 54 },
+  stateText: { color: "#82788d", fontSize: 13, lineHeight: 19, marginTop: 10, textAlign: "center" },
+  emptyIcon: { color: "#8b5bc2", fontSize: 42 },
+  emptyTitle: { color: "#3d3348", fontSize: 17, fontWeight: "800", marginTop: 10 },
+  errorState: { alignItems: "center", backgroundColor: "#fff", borderRadius: 18, marginTop: 18, padding: 24 },
+  errorTitle: { color: "#3d3348", fontSize: 16, fontWeight: "800", textAlign: "center" },
+  errorText: { color: "#82788d", fontSize: 13, lineHeight: 19, marginTop: 8, textAlign: "center" },
+  apiText: { color: "#9b91a5", fontSize: 11, marginTop: 7 },
+  retry: { backgroundColor: "#6d28d9", borderRadius: 10, marginTop: 16, paddingHorizontal: 16, paddingVertical: 11 },
+  retryText: { color: "#fff", fontSize: 13, fontWeight: "800" },
+  warning: { color: "#8a5a00", fontSize: 12, lineHeight: 18, paddingBottom: 24, textAlign: "center" },
 });

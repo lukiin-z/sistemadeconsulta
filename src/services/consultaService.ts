@@ -6,7 +6,6 @@ export type NovaConsulta = {
   medicoId: number;
   pacienteId: number;
   dataHora: string;
-  status: StatusConsulta;
   valor: number;
   observacoes?: string;
 };
@@ -24,42 +23,17 @@ export async function buscarConsultaPorId(id: number): Promise<Consulta> {
 export async function agendarConsulta(
   novaConsulta: NovaConsulta
 ): Promise<Consulta> {
-  const payload = {
-    medico: { id: novaConsulta.medicoId },
-    paciente: { id: novaConsulta.pacienteId },
-    dataHora: novaConsulta.dataHora,
-    status: novaConsulta.status,
-    valor: novaConsulta.valor,
-    observacoes: novaConsulta.observacoes,
-  };
-  const response = await api.post<Consulta>("/consultas", payload);
+  const response = await api.post<Consulta>("/consultas", novaConsulta);
   return response.data;
 }
 
-export async function confirmarConsulta(consulta: Consulta): Promise<Consulta> {
-  return atualizarStatusConsulta(consulta, "confirmada");
-}
-
-export async function cancelarConsulta(consulta: Consulta): Promise<Consulta> {
-  return atualizarStatusConsulta(consulta, "cancelada");
-}
-
-async function atualizarStatusConsulta(
-  consulta: Consulta,
+export async function atualizarStatusConsulta(
+  consultaId: number,
   status: StatusConsulta
 ): Promise<Consulta> {
-  const payload = {
-    medico: { id: consulta.medico.id },
-    paciente: { id: consulta.paciente.id },
-    dataHora: consulta.dataHora,
+  const response = await api.patch<Consulta>(`/consultas/${consultaId}/status`, {
     status,
-    valor: consulta.valor,
-    observacoes: consulta.observacoes,
-  };
-  const response = await api.put<Consulta>(
-    `/consultas/${consulta.id}`,
-    payload
-  );
+  });
   return response.data;
 }
 
