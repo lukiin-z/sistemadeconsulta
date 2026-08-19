@@ -12,7 +12,8 @@ O backend compatível está em [lukiin-z/backend-hete](https://github.com/lukiin
 - TypeScript em modo estrito;
 - Axios;
 - DateTimePicker nativo;
-- Picker para seleção de médico e paciente.
+- Picker para seleção de médico e paciente;
+- React Navigation com fluxos tipados.
 
 ## Requisitos
 
@@ -61,6 +62,9 @@ Se usar outro endereço, inclua a origem do Expo na configuração `CORS_ALLOWED
 
 - listagem de médicos e pacientes;
 - painel com indicadores por status;
+- tela inicial com acesso de paciente, médico e visão geral;
+- fluxo do paciente por CPF: consultas, especialidade, médico e agendamento;
+- fluxo do médico por CRM: perfil, valor e gerenciamento da agenda;
 - filtros horizontais de agenda;
 - cards responsivos com médico, especialidade, paciente, data e valor;
 - agendamento com seletores, data e horário guiados;
@@ -77,6 +81,8 @@ src/
 ├── components/         componentes reutilizáveis
 ├── hooks/              estado e ações da agenda
 ├── interfaces/         modelos principais do domínio
+├── navigation/         contratos tipados das rotas
+├── screens/            telas dos fluxos de paciente e médico
 ├── services/           cliente HTTP e integração REST
 ├── types/              tipos auxiliares do domínio
 └── utils/              data, horário e formatação
@@ -88,3 +94,5 @@ index.ts                ponto de entrada
 ## Integração
 
 O app usa `/medicos`, `/pacientes`, `/consultas` e `/consultas/{id}/status`. Para agendar, médico e paciente precisam existir e estar ativos. A API também rejeita choque de horário e transições de status inválidas, e o app exibe essas mensagens ao usuário.
+
+Com o backend no perfil `dev`, use CPF `12345678900` no fluxo do paciente ou CRM `CRM-SP 123456` no fluxo do médico.

@@ -10,14 +10,58 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import AgendamentoModal from "./src/components/AgendamentoModal";
 import ConsultaCard from "./src/components/ConsultaCard";
 import FiltrosStatus, { FiltroStatus } from "./src/components/FiltrosStatus";
 import { useAgenda } from "./src/hooks/useAgenda";
 import { API_BASE_URL } from "./src/services/api";
+import { RootStackParamList } from "./src/navigation/types";
+import HomeScreen from "./src/screens/HomeScreen";
+import LoginPacienteScreen from "./src/screens/paciente/LoginPacienteScreen";
+import CadastroPacienteScreen from "./src/screens/paciente/CadastroPacienteScreen";
+import MinhasConsultasScreen from "./src/screens/paciente/MinhasConsultasScreen";
+import EscolhaEspecialidadeScreen from "./src/screens/paciente/EscolhaEspecialidadeScreen";
+import EscolhaMedicoScreen from "./src/screens/paciente/EscolhaMedicoScreen";
+import AgendarConsultaScreen from "./src/screens/paciente/AgendarConsultaScreen";
+import LoginMedicoScreen from "./src/screens/medico/LoginMedicoScreen";
+import CadastroMedicoScreen from "./src/screens/medico/CadastroMedicoScreen";
+import PerfilMedicoScreen from "./src/screens/medico/PerfilMedicoScreen";
+import ConsultasMedicoScreen from "./src/screens/medico/ConsultasMedicoScreen";
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName="Home"
+        screenOptions={{
+          headerStyle: { backgroundColor: "#3b1261" },
+          headerTintColor: "#fff",
+          headerTitleStyle: { fontWeight: "800" },
+        }}
+      >
+        <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Agenda" component={AgendaScreen} options={{ title: "Visão geral" }} />
+        <Stack.Screen name="LoginPaciente" component={LoginPacienteScreen} options={{ title: "Acesso do paciente" }} />
+        <Stack.Screen name="CadastroPaciente" component={CadastroPacienteScreen} options={{ title: "Cadastro de paciente" }} />
+        <Stack.Screen name="MinhasConsultas" component={MinhasConsultasScreen} options={{ title: "Minhas consultas", headerBackVisible: false }} />
+        <Stack.Screen name="EscolhaEspecialidade" component={EscolhaEspecialidadeScreen} options={{ title: "Especialidade" }} />
+        <Stack.Screen name="EscolhaMedico" component={EscolhaMedicoScreen} options={{ title: "Médico" }} />
+        <Stack.Screen name="AgendarConsulta" component={AgendarConsultaScreen} options={{ title: "Agendar consulta" }} />
+        <Stack.Screen name="LoginMedico" component={LoginMedicoScreen} options={{ title: "Acesso do médico" }} />
+        <Stack.Screen name="CadastroMedico" component={CadastroMedicoScreen} options={{ title: "Cadastro de médico" }} />
+        <Stack.Screen name="PerfilMedico" component={PerfilMedicoScreen} options={{ title: "Perfil profissional", headerBackVisible: false }} />
+        <Stack.Screen name="ConsultasMedico" component={ConsultasMedicoScreen} options={{ title: "Agenda médica", headerBackVisible: false }} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+export function AgendaScreen() {
   const agenda = useAgenda();
   const [modalVisible, setModalVisible] = useState(false);
   const [filtro, setFiltro] = useState<FiltroStatus>("todas");

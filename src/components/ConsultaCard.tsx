@@ -14,7 +14,7 @@ const statusVisual: Record<StatusConsulta, { label: string; background: string; 
 type Props = {
   consulta: Consulta;
   busy?: boolean;
-  onStatusChange: (status: StatusConsulta) => void;
+  onStatusChange?: (status: StatusConsulta) => void;
 };
 
 export default function ConsultaCard({ consulta, busy = false, onStatusChange }: Props) {
@@ -56,9 +56,9 @@ export default function ConsultaCard({ consulta, busy = false, onStatusChange }:
 
       {busy ? (
         <ActivityIndicator color="#6d28d9" style={styles.loading} />
-      ) : (
+      ) : onStatusChange ? (
         <Actions status={consulta.status} onStatusChange={onStatusChange} />
-      )}
+      ) : null}
     </View>
   );
 }
