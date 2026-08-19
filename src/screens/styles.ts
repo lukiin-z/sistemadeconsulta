@@ -1,0 +1,25 @@
+import { StyleSheet } from "react-native";
+
+export const screenStyles = StyleSheet.create({
+  page: { backgroundColor: "#f7f4fa", flex: 1 },
+  content: { flexGrow: 1, padding: 20 },
+  hero: { backgroundColor: "#3b1261", padding: 24 },
+  eyebrow: { color: "#bfa5da", fontSize: 11, fontWeight: "800", letterSpacing: 1.6 },
+  title: { color: "#fff", fontSize: 28, fontWeight: "900", marginTop: 6 },
+  subtitle: { color: "#d9c8e7", fontSize: 14, lineHeight: 20, marginTop: 7 },
+  card: { backgroundColor: "#fff", borderColor: "#eee9f2", borderRadius: 18, borderWidth: 1, marginBottom: 14, padding: 18 },
+  label: { color: "#4b4256", fontSize: 13, fontWeight: "700", marginBottom: 7 },
+  input: { backgroundColor: "#fff", borderColor: "#d9d4e5", borderRadius: 12, borderWidth: 1, color: "#241b2f", fontSize: 15, marginBottom: 16, padding: 13 },
+  button: { alignItems: "center", backgroundColor: "#6d28d9", borderRadius: 13, padding: 15 },
+  buttonText: { color: "#fff", fontSize: 15, fontWeight: "800" },
+  secondaryButton: { alignItems: "center", borderColor: "#6d28d9", borderRadius: 13, borderWidth: 1, marginTop: 12, padding: 14 },
+  secondaryText: { color: "#6d28d9", fontSize: 14, fontWeight: "700" },
+  disabled: { opacity: 0.5 },
+  error: { backgroundColor: "#ffebed", borderRadius: 10, color: "#b42332", marginBottom: 14, padding: 11 },
+  empty: { color: "#756b80", lineHeight: 20, padding: 28, textAlign: "center" },
+  list: { padding: 18, paddingBottom: 36 },
+  row: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  itemTitle: { color: "#241b2f", fontSize: 16, fontWeight: "800" },
+  itemMeta: { color: "#756b80", fontSize: 12, marginTop: 4 },
+  sectionTitle: { color: "#241b2f", fontSize: 22, fontWeight: "900", marginBottom: 16 },
+});
